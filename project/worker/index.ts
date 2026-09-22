@@ -1,6 +1,7 @@
 interface Env {
   DB?: D1Database;
   ASSETS: Fetcher;
+  IMAGES?: R2Bucket;
   ADMIN_PASSWORD?: string;
   SESSION_SECRET?: string;
 }
@@ -46,6 +47,19 @@ async function publicData(env: Env) {
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
+
+    if (url.pathname.startsWith("/media/") && request.method === "GET") {
+      if (!env.IMAGES) return new Response("Image storage is not configured.", { status: 404 });
+      const key = decodeURIComponent(url.pathname.slice("/media/".length));
+      const object = await env.IMAGES.get(key);
+      if (!object) return new Response("Not found", { status: 404 });
+      const headers = new Headers();
+      object.writeHttpMetadata(headers);
+      headers.set("etag", object.httpEtag);
+      headers.set("cache-control", "public, max-age=31536000, immutable");
+      return new Response(object.body, { headers });
+    }
+
     if (!url.pathname.startsWith("/api/")) return env.ASSETS.fetch(request);
 
     if (url.pathname === "/api/public" && request.method === "GET") return json(await publicData(env));
@@ -66,6 +80,19 @@ export default {
 
     if (!(await isAdmin(request, env))) return json({ error: "Unauthorized" }, 401);
     if (!env.DB) return json({ error: "Database binding is not configured." }, 503);
+
+    if (url.pathname === "/api/admin/upload" && request.method === "POST") {
+      if (!env.IMAGES) return json({ error: "Image storage is not configured yet." }, 503);
+      const form = await request.formData();
+      const file = form.get("file");
+      if (!(file instanceof File)) return json({ error: "Choose an image to upload." }, 400);
+      if (!file.type.startsWith("image/")) return json({ error: "Only image files are allowed." }, 400);
+      if (file.size > 10 * 1024 * 1024) return json({ error: "Images must be 10 MB or smaller." }, 400);
+      const ext = (file.name.split(".").pop() || "jpg").replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
+      const key = `uploads/${Date.now()}-${crypto.randomUUID()}.${ext}`;
+      await env.IMAGES.put(key, file.stream(), { httpMetadata: { contentType: file.type } });
+      return json({ ok: true, url: `/media/${encodeURIComponent(key).replace(/%2F/g, "/")}` });
+    }
 
     if (url.pathname === "/api/admin/data" && request.method === "GET") {
       const data = await publicData(env);
