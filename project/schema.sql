@@ -29,3 +29,11 @@ CREATE TABLE IF NOT EXISTS enquiries (
 );
 CREATE INDEX IF NOT EXISTS idx_events_date ON events(date);
 CREATE INDEX IF NOT EXISTS idx_enquiries_created ON enquiries(created_at);
+
+CREATE TABLE IF NOT EXISTS gallery (
+  id TEXT PRIMARY KEY,
+  image_url TEXT NOT NULL,
+  alt_text TEXT,
+  sort_order INTEGER NOT NULL DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS idx_gallery_sort ON gallery(sort_order);
