@@ -169,14 +169,14 @@ function App() {
 
   return (
     <div className="min-h-screen bg-cream text-ink">
-      <header className="fixed inset-x-0 top-0 z-40 border-b border-white/10 bg-ink/95 text-white backdrop-blur-md">
+      <header className="fixed inset-x-0 top-0 z-40 border-b border-white/15 bg-ink text-white shadow-lg">
         <div className="mx-auto flex h-[74px] max-w-7xl items-center justify-between px-5 lg:px-8">
           <button onClick={() => scrollTo('top')} className="group flex items-center gap-3 text-left" aria-label="Seaview Club home">
             <span className="flex h-10 w-10 items-center justify-center border border-sand/60 font-display text-lg text-sand transition group-hover:bg-sand group-hover:text-ink">SC</span>
-            <span><span className="block font-display text-lg leading-none tracking-wide">SEAVIEW CLUB</span><span className="mt-1 block text-[11px] font-semibold uppercase tracking-[0.20em] text-white/90">Lovely Banks · Victoria</span></span>
+            <span><span className="block font-display text-lg leading-none tracking-wide">SEAVIEW CLUB</span><span className="mt-1 block text-[11px] font-semibold uppercase tracking-[0.20em] text-white">Lovely Banks · Victoria</span></span>
           </button>
           <nav className="hidden items-center gap-7 lg:flex">
-            {['Venue Hire', 'Availability Calendar', "What's On", 'Club Activities', 'About', 'Contact'].map((item) => <button key={item} onClick={() => scrollTo(item === 'Venue Hire' ? 'venue' : item === 'Availability Calendar' ? 'availability' : item === "What's On" ? 'whats-on' : item === 'Club Activities' ? 'activities' : item.toLowerCase())} className="text-sm font-medium text-white/90 transition hover:text-sand">{item}</button>)}
+            {['Venue Hire', 'Availability Calendar', "What's On", 'Club Activities', 'About', 'Contact'].map((item) => <button key={item} onClick={() => scrollTo(item === 'Venue Hire' ? 'venue' : item === 'Availability Calendar' ? 'availability' : item === "What's On" ? 'whats-on' : item === 'Club Activities' ? 'activities' : item.toLowerCase())} className="text-sm font-semibold text-white transition hover:text-sand">{item}</button>)}
             <button onClick={() => scrollTo('availability')} className="button button-small button-sand">Check availability <ArrowRight size={15} /></button>
           </nav>
           <button className="lg:hidden" onClick={() => setMenuOpen(!menuOpen)} aria-label="Toggle menu">{menuOpen ? <X /> : <Menu />}</button>
