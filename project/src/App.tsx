@@ -23,6 +23,7 @@ import { supabase } from '@/lib/supabase';
 type AvailabilityStatus = 'available' | 'booked' | 'club_event';
 type Availability = { date: string; status: AvailabilityStatus; label: string | null };
 type ClubEvent = { id: string; date: string; title: string; time: string | null; description: string | null; image_url: string | null };
+type GalleryItem = { id: string; image_url: string; alt_text: string | null; sort_order: number };
 
 type CalendarCell = { date: Date; iso: string; outside: boolean };
 
@@ -72,6 +73,7 @@ function App() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [availability, setAvailability] = useState<Availability[]>(fallbackAvailability);
   const [events, setEvents] = useState<ClubEvent[]>(fallbackEvents);
+  const [gallery, setGallery] = useState<GalleryItem[]>([]);
   const [calendarMonth, setCalendarMonth] = useState(new Date(2026, 9, 1));
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [lightboxImage, setLightboxImage] = useState<string | null>(null);
@@ -81,16 +83,25 @@ function App() {
 
   useEffect(() => {
     const loadSiteData = async (): Promise<void> => {
-      if (!supabase) {
-        setLoadingData(false);
-        return;
+      try {
+        const response = await fetch('/api/public');
+        if (response.ok) {
+          const data = await response.json();
+          if (data.availability?.length) setAvailability(data.availability as Availability[]);
+          if (data.events?.length) setEvents(data.events as ClubEvent[]);
+          if (data.gallery?.length) setGallery(data.gallery as GalleryItem[]);
+          setLoadingData(false);
+          return;
+        }
+      } catch {}
+      if (supabase) {
+        const [availabilityResult, eventsResult] = await Promise.all([
+          supabase.from('public_availability').select('date, status, label'),
+          supabase.from('events').select('id, date, title, time, description, image_url').order('date', { ascending: true }),
+        ]);
+        if (!availabilityResult.error && availabilityResult.data?.length) setAvailability(availabilityResult.data as Availability[]);
+        if (!eventsResult.error && eventsResult.data?.length) setEvents(eventsResult.data as ClubEvent[]);
       }
-      const [availabilityResult, eventsResult] = await Promise.all([
-        supabase.from('public_availability').select('date, status, label'),
-        supabase.from('events').select('id, date, title, time, description, image_url').order('date', { ascending: true }),
-      ]);
-      if (!availabilityResult.error && availabilityResult.data?.length) setAvailability(availabilityResult.data as Availability[]);
-      if (!eventsResult.error && eventsResult.data?.length) setEvents(eventsResult.data as ClubEvent[]);
       setLoadingData(false);
     };
     void loadSiteData();
@@ -196,7 +207,7 @@ function App() {
 
         <section id="about" className="bg-ink text-white"><div className="mx-auto grid max-w-7xl gap-12 px-5 py-20 lg:grid-cols-[1.1fr_0.9fr] lg:items-center lg:px-8 lg:py-28"><div><p className="eyebrow text-sand">About Seaview Club</p><h2 className="section-title mt-4 text-white">A club built around community.</h2><p className="mt-6 max-w-xl text-lg leading-8 text-white/70">Sport, social connection, local gatherings and a warm welcome — Seaview Club brings people together in a way that feels easy and genuine.</p><div className="mt-10 grid max-w-lg grid-cols-3 gap-4 border-t border-white/15 pt-5 text-center"><div><Users className="mx-auto text-sand" size={22} /><p className="mt-3 text-xs uppercase tracking-wider text-white/55">Community</p></div><div><Trophy className="mx-auto text-sand" size={22} /><p className="mt-3 text-xs uppercase tracking-wider text-white/55">Sport</p></div><div><Sparkles className="mx-auto text-sand" size={22} /><p className="mt-3 text-xs uppercase tracking-wider text-white/55">Social</p></div></div></div><div className="relative mx-auto max-w-sm"><div className="absolute -inset-3 border border-sand/30" /><img src={detailImage} alt="Seaview Club branded stubby holder on the club bar" className="relative aspect-square w-full object-cover" /><div className="absolute -bottom-6 -left-5 bg-sand p-4 text-ink"><Quote size={20} /><p className="mt-2 max-w-[190px] font-display text-lg leading-tight">Local spirit, made for sharing.</p></div></div></div></section>
 
-        <section id="gallery" className="bg-cream"><div className="mx-auto max-w-7xl px-5 py-20 lg:px-8 lg:py-28"><div className="flex items-end justify-between"><div><p className="eyebrow">A closer look</p><h2 className="section-title mt-4">The Seaview feeling.</h2></div><p className="hidden text-sm text-ink/50 md:block">Tap an image to view it larger</p></div><div className="mt-10 grid grid-cols-2 gap-3 md:grid-cols-4 md:grid-rows-2"><button onClick={() => setLightboxImage(exteriorImage)} className="group col-span-2 row-span-2 overflow-hidden"><img src={exteriorImage} alt="Seaview Club exterior" className="h-full min-h-[340px] w-full object-cover transition duration-700 group-hover:scale-105" /></button><button onClick={() => setLightboxImage(hallImage)} className="group overflow-hidden"><img src={hallImage} alt="Seaview Club function hall" className="h-full min-h-[165px] w-full object-cover transition duration-700 group-hover:scale-105" /></button><button onClick={() => setLightboxImage(detailImage)} className="group overflow-hidden"><img src={detailImage} alt="Seaview Club branded drink holder" className="h-full min-h-[165px] w-full object-cover transition duration-700 group-hover:scale-105" /></button></div></div></section>
+        <section id="gallery" className="bg-cream"><div className="mx-auto max-w-7xl px-5 py-20 lg:px-8 lg:py-28"><div className="flex items-end justify-between"><div><p className="eyebrow">Gallery</p><h2 className="section-title mt-4">Life at Seaview Club.</h2></div><p className="hidden text-sm text-ink/50 md:block">Tap an image to view it larger</p></div><div className="mt-10 grid grid-cols-2 gap-3 md:grid-cols-4">{(gallery.length?gallery:[{id:'exterior',image_url:exteriorImage,alt_text:'Seaview Club exterior',sort_order:0},{id:'hall',image_url:hallImage,alt_text:'Seaview Club function hall',sort_order:1},{id:'detail',image_url:detailImage,alt_text:'Seaview Club detail',sort_order:2}]).map((image,index)=><button key={image.id} onClick={()=>setLightboxImage(image.image_url)} className={`group overflow-hidden ${index===0?'col-span-2 row-span-2':''}`}><img src={image.image_url} alt={image.alt_text||'Seaview Club gallery image'} className={`h-full w-full object-cover transition duration-700 group-hover:scale-105 ${index===0?'min-h-[340px]':'min-h-[165px]'}`}/></button>)}</div></div></section>
 
         <section id="contact" className="bg-white"><div className="mx-auto grid max-w-7xl gap-12 px-5 py-20 lg:grid-cols-[0.8fr_1.2fr] lg:px-8 lg:py-28"><div><p className="eyebrow">Visit us</p><h2 className="section-title mt-4">Come and discover Seaview Club.</h2><p className="mt-5 leading-7 text-ink/65">A local place for a good night out, a friendly game, or your next gathering.</p><div className="mt-8 space-y-5"><div className="flex gap-4"><MapPin className="mt-1 shrink-0 text-navy" size={19} /><p>335 Bluestone Bridge Road<br />Lovely Banks VIC 3213<br />Australia</p></div><a href="tel:+61452077627" className="flex gap-4 transition hover:text-navy"><Phone className="mt-1 shrink-0 text-navy" size={19} /><span>0452 077 627</span></a><a href="mailto:bookings@seaviewclubgeelong.com" className="flex gap-4 transition hover:text-navy"><Mail className="mt-1 shrink-0 text-navy" size={19} /><span>bookings@seaviewclubgeelong.com</span></a><a href="https://www.instagram.com/seaviewclubinc" target="_blank" rel="noreferrer" className="flex gap-4 transition hover:text-navy"><Instagram className="mt-1 shrink-0 text-navy" size={19} /><span>@seaviewclubinc</span><ExternalLink size={13} className="mt-1" /></a></div></div><div className="min-h-[330px] overflow-hidden bg-[#dbe2e2]"><iframe title="Map showing Seaview Club in Lovely Banks" src="https://www.openstreetmap.org/export/embed.html?bbox=144.276%2C-38.061%2C144.36%2C-37.99&layer=mapnik&marker=-38.025%2C144.318" className="h-full min-h-[330px] w-full border-0 grayscale" loading="lazy" /></div></div></section>
 
