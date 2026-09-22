@@ -31,16 +31,18 @@ async function readBody(request: Request) {
 
 async function publicData(env: Env) {
   if (!env.DB) return { configured: false };
-  const [availability, events, settings] = await Promise.all([
+  const [availability, events, settings, gallery] = await Promise.all([
     env.DB.prepare("SELECT date,status,label FROM availability ORDER BY date").all(),
     env.DB.prepare("SELECT id,date,title,time,description,image_url FROM events ORDER BY date").all(),
     env.DB.prepare("SELECT key,value FROM settings").all(),
+    env.DB.prepare("SELECT id,image_url,alt_text,sort_order FROM gallery ORDER BY sort_order,id").all(),
   ]);
   return {
     configured: true,
     availability: availability.results,
     events: events.results,
     settings: Object.fromEntries((settings.results as any[]).map(r => [r.key, r.value])),
+    gallery: gallery.results,
   };
 }
 
@@ -118,6 +120,20 @@ export default {
 
     if (url.pathname.startsWith("/api/admin/events/") && request.method === "DELETE") {
       await env.DB.prepare("DELETE FROM events WHERE id=?").bind(decodeURIComponent(url.pathname.split("/").pop()!)).run();
+      return json({ ok: true });
+    }
+
+    if (url.pathname === "/api/admin/gallery" && request.method === "POST") {
+      const b = await readBody(request);
+      if (!b.image_url) return json({ error: "Image is required." }, 400);
+      const id = b.id || crypto.randomUUID();
+      await env.DB.prepare("INSERT INTO gallery(id,image_url,alt_text,sort_order) VALUES(?,?,?,?) ON CONFLICT(id) DO UPDATE SET image_url=excluded.image_url,alt_text=excluded.alt_text,sort_order=excluded.sort_order")
+        .bind(id,b.image_url,b.alt_text||"Seaview Club gallery image",Number(b.sort_order)||0).run();
+      return json({ ok: true, id });
+    }
+
+    if (url.pathname.startsWith("/api/admin/gallery/") && request.method === "DELETE") {
+      await env.DB.prepare("DELETE FROM gallery WHERE id=?").bind(decodeURIComponent(url.pathname.split("/").pop()!)).run();
       return json({ ok: true });
     }
 
