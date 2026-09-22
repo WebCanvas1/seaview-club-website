@@ -81,6 +81,10 @@ function App() {
 
   useEffect(() => {
     const loadSiteData = async (): Promise<void> => {
+      if (!supabase) {
+        setLoadingData(false);
+        return;
+      }
       const [availabilityResult, eventsResult] = await Promise.all([
         supabase.from('public_availability').select('date, status, label'),
         supabase.from('events').select('id, date, title, time, description, image_url').order('date', { ascending: true }),
@@ -115,6 +119,22 @@ function App() {
     const acknowledged = formData.get('acknowledged') === 'on';
     if (!acknowledged) {
       setFormError('Please confirm that this enquiry does not confirm a booking.');
+      return;
+    }
+    if (!supabase) {
+      const subject = encodeURIComponent('Seaview Club function enquiry');
+      const body = encodeURIComponent([
+        `Name: ${String(formData.get('fullName') ?? '').trim()}`,
+        `Email: ${String(formData.get('email') ?? '').trim()}`,
+        `Phone: ${String(formData.get('phone') ?? '').trim()}`,
+        `Function: ${String(formData.get('functionType') ?? '')}`,
+        `Preferred date: ${String(formData.get('preferredDate') ?? '')}`,
+        `Alternative date: ${String(formData.get('alternativeDate') ?? '')}`,
+        `Approx. guests: ${String(formData.get('guests') ?? '')}`,
+        '',
+        String(formData.get('message') ?? ''),
+      ].join('\n'));
+      window.location.href = `mailto:bookings@seaviewclubgeelong.com?subject=${subject}&body=${body}`;
       return;
     }
     const { error } = await supabase.from('enquiries').insert({
