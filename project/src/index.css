@@ -62,6 +62,9 @@ button:disabled { cursor: not-allowed; }
 .animate-rise { animation: rise 700ms ease-out both; }
 
 @media (max-width: 640px) {
-  .calendar-day { min-height: 58px; font-size: 0.9rem; }
-  .calendar-label { display: block; font-size: 0.55rem; }
+  .calendar-nav { height: 40px; width: 40px; }
+  .calendar-day { min-height: 62px; padding: 0.2rem 0.1rem; font-size: 1rem; font-weight: 700; }
+  .calendar-day.booked { background: #ead2cf; color: #7d443e; }
+  .calendar-day.club_event { background: #cbddea; color: #244d68; }
+  .calendar-label { display: block; font-size: 0.52rem; font-weight: 800; line-height: 1.05; letter-spacing: 0; white-space: normal; }
 }
